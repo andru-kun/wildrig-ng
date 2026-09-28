@@ -14,7 +14,6 @@ Algorithm availability depends on your GPU, driver and miner version. Check the 
 - [HiveOS and mmpOS](#hiveos-and-mmpos)
 - [Command-line options](#command-line-options)
 - [Reading the mining screen](#reading-the-mining-screen)
-- [Developer fee](#developer-fee)
 - [Troubleshooting](#troubleshooting)
 
 ## Quick start
@@ -108,20 +107,20 @@ Selected **Arc Pro** and **Flex** cards are also recognized. Check the algorithm
 
 ## Supported algorithms
 
-Use the name in the first column with `--algo`. **Yes** means supported on compatible cards from that vendor, subject to the notes below. **—** means unavailable. Your card also needs enough free memory for the selected algorithm.
+Use the name in the first column with `--algo`. **Yes** means supported on compatible cards from that vendor, subject to the notes below. **—** means unavailable. Your card also needs enough free memory for the selected algorithm. The fee column shows the rate built into this version; check the dashboard for the active rate.
 
-| Algorithm | NVIDIA | AMD | Intel Arc | Accepted aliases |
-| --- | --- | --- | --- | --- |
-| `autolykos2` | Yes | Polaris, Vega, RDNA (8 GB) | — | `autolykos`, `ergo` |
-| `kawpow` | Yes | Yes | Yes | `rvn` |
-| `nexapow` | Yes | Yes | Yes | `nexa` |
-| `octopus` | Yes | — | — | `conflux`, `cfx` |
-| `pearlhash` | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — | `pearl` |
-| `progpowz` | Yes | Yes | Yes | `zano` |
-| `qhash` | Yes | Yes | Yes | `qubitcoin`, `qtc` |
-| `quantus` | Yes | Yes | — | `qpow-poseidon2` |
-| `sha256d` | Yes | Yes | Yes | `sha256` |
-| `xelishashv3` | Yes | Yes | — | `xelis`, `xel` |
+| Algorithm | Developer fee | NVIDIA | AMD | Intel Arc | Accepted aliases |
+| --- | --- | --- | --- | --- | --- |
+| `autolykos2` | 0% | Yes | Polaris, Vega, RDNA (8 GB) | — | `autolykos`, `ergo` |
+| `kawpow` | 1% | Yes | Yes | Yes | `rvn` |
+| `nexapow` | 1% | Yes | Yes | Yes | `nexa` |
+| `octopus` | 0% | Yes | — | — | `conflux`, `cfx` |
+| `pearlhash` | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — | `pearl` |
+| `progpowz` | 1% | Yes | Yes | Yes | `zano` |
+| `qhash` | 2% | Yes | Yes | Yes | `qubitcoin`, `qtc` |
+| `quantus` | 1% | Yes | Yes | — | `qpow-poseidon2` |
+| `sha256d` | 0% | Yes | Yes | Yes | `sha256` |
+| `xelishashv3` | 1% | Yes | Yes | — | `xelis`, `xel` |
 
 Compatibility notes:
 
@@ -329,20 +328,6 @@ The dashboard shows GPU hashrates, available sensor readings, share counters, po
 - **DAG generation / tuning:** preparation before normal mining speed is reached. Allow it to complete before comparing performance.
 
 Use **Page Up / Page Down**, **Up / Down**, **Home / End** or the mouse wheel to scroll the log. A paused hot GPU resumes after cooling to its configured resume threshold.
-
-## Developer fee
-
-WildRig may spend a portion of mining time on developer-fee work. The table shows the fees built into this version. A signed fee list can change the active rate while the miner runs; check the dashboard for the current percentage. When a fee is active, its rate is also announced in the log.
-
-| Algorithm | Default fee |
-| --- | --- |
-| `autolykos2`, `octopus`, `pearlhash`, `sha256d` | 0% |
-| `kawpow`, `nexapow`, `progpowz`, `quantus`, `xelishashv3` | 1% |
-| `qhash` | 2% |
-
-On `kawpow`, developer-fee work uses `progpowz`.
-
-If the miner reports that it cannot connect to a developer-fee pool, mining can pause until that connection succeeds. Check connectivity and the log rather than assuming the GPUs have stopped responding.
 
 ## Troubleshooting
 
