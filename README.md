@@ -109,24 +109,23 @@ Selected **Arc Pro** and **Flex** cards are also recognized. Check the algorithm
 
 Use the name in the first column with `--algo`. **Yes** means supported on compatible cards from that vendor, subject to the notes below. **—** means unavailable. Your card also needs enough free memory for the selected algorithm. The fee column shows the rate built into this version; check the dashboard for the active rate.
 
-| Algorithm | Developer fee | NVIDIA | AMD | Intel Arc | Accepted aliases |
-| --- | --- | --- | --- | --- | --- |
-| `autolykos2` | 0% | Yes | Polaris, Vega, RDNA (8 GB) | — | `autolykos`, `ergo` |
-| `kawpow` | 1% | Yes | Yes | Yes | `rvn` |
-| `nexapow` | 1% | Yes | Yes | Yes | `nexa` |
-| `octopus` | 0% | Yes | — | — | `conflux`, `cfx` |
-| `pearlhash` | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — | `pearl` |
-| `progpowz` | 1% | Yes | Yes | Yes | `zano` |
-| `qhash` | 2% | Yes | Yes | Yes | `qubitcoin`, `qtc` |
-| `quantus` | 1% | Yes | Yes | — | `qpow-poseidon2` |
-| `sha256d` | 0% | Yes | Yes | Yes | `sha256` |
-| `xelishashv3` | 1% | Yes | Yes | — | `xelis`, `xel` |
+| Algorithm | Developer fee | NVIDIA | AMD | Intel Arc |
+| --- | --- | --- | --- | --- |
+| `autolykos2` | 0% | Yes | Polaris, Vega, RDNA (8 GB) | — |
+| `kawpow` | 1% | Yes | Yes | Yes |
+| `nexapow` | 1% | Yes | Yes | Yes |
+| `octopus` | 0% | Yes | — | — |
+| `pearlhash` | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — |
+| `progpowz` | 1% | Yes | Yes | Yes |
+| `qhash` | 2% | Yes | Yes | Yes |
+| `quantus` | 1% | Yes | Yes | — |
+| `sha256d` | 0% | Yes | Yes | Yes |
+| `xelishashv3` | 1% | Yes | Yes | — |
 
 Compatibility notes:
 
 - NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash requires Tensor Cores; Pascal and GTX 16 cards without Tensor Cores do not meet that requirement.
 - AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 2/3/4.
-- `qtc` selects **Qubitcoin's qhash**, not Quantus. Use `--algo quantus` for Quantus.
 - Autolykos2 needs a card with 8 GB: its table is 6.8 GiB in 2026 and grows by 5 % about every 71 days (7.1 GiB from block 1,894,400, 7.5 GiB from 1,945,600), so 8 GB cards run out of room around March 2027.
 - Use the pool address and port provided for your chosen coin and algorithm.
 
