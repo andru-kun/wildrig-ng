@@ -18,7 +18,7 @@ Algorithm availability depends on your GPU, driver and miner version. Check the 
 
 ## Quick start
 
-You need a supported GPU with its vendor driver installed, a wallet for the coin you want to mine, and the pool's connection details. For AMD and Intel cards, install a driver that includes OpenCL support.
+You need a supported GPU with its vendor driver installed, a wallet for the coin you want to mine, and the pool's connection details. For AMD and Intel cards, install a driver that includes OpenCL support. AMD Instinct accelerators need Linux with ROCm and its OpenCL runtime.
 
 1. Extract the miner into a folder.
 2. Open a terminal in that folder, or create a launch script using an example below.
@@ -90,6 +90,17 @@ Available algorithms depend on the model and free GPU memory. **PearlHash requir
 
 Older **GCN 2/3** cards, including Hawaii and Fiji models, can use **KawPow** and **ProgPowZ**. The other listed algorithms require newer AMD cards.
 
+#### AMD Instinct accelerators
+
+| Architecture | Supported models |
+| --- | --- |
+| **CDNA 1** | Instinct **MI100** |
+| **CDNA 2** | Instinct **MI210**, **MI250**, **MI250X** |
+| **CDNA 3** | Instinct **MI300A**, **MI300X**, **MI308X**, **MI325X** |
+| **CDNA 4** | Instinct **MI350X**, **MI355X** |
+
+Instinct accelerators run on **Linux with ROCm** only. They can mine every AMD algorithm except **PearlHash**. An MI250 or MI250X appears as two GPUs. The MI300A is used like a discrete card, although its memory is shared with the CPU.
+
 ### Intel Arc
 
 | Generation | Graphics cards |
@@ -111,21 +122,22 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 
 | Algorithm | Developer fee | NVIDIA | AMD | Intel Arc |
 | --- | --- | --- | --- | --- |
-| `autolykos2` | 0% | Yes | Polaris, Vega, RDNA (8 GB) | — |
+| `autolykos2` | 0% | Yes | Yes | — |
 | `kawpow` | 1% | Yes | Yes | Yes |
 | `nexapow` | 1% | Yes | Yes | Yes |
 | `octopus` | 0% | Yes | — | — |
 | `pearlhash` | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — |
 | `progpowz` | 1% | Yes | Yes | Yes |
 | `qhash` | 2% | Yes | Yes | Yes |
-| `quantus` | 1% | Yes | Yes | — |
+| `quantus` | 1% | Yes | Yes | Yes |
 | `sha256d` | 0% | Yes | Yes | Yes |
-| `xelishashv3` | 1% | Yes | Yes | — |
+| `xelishashv3` | 1% | Yes | Yes | Yes |
 
 Compatibility notes:
 
 - NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash requires Tensor Cores; Pascal and GTX 16 cards without Tensor Cores do not meet that requirement.
 - AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 2/3/4.
+- AMD Instinct accelerators (CDNA 1–4) need Linux with ROCm and support every AMD algorithm except PearlHash.
 - Autolykos2 needs a card with 8 GB: its table is 6.8 GiB in 2026 and grows by 5 % about every 71 days (7.1 GiB from block 1,894,400, 7.5 GiB from 1,945,600), so 8 GB cards run out of room around March 2027.
 - Use the pool address and port provided for your chosen coin and algorithm.
 
@@ -201,8 +213,6 @@ Select **Custom miner**, enter the mmpOS package download link, and choose your 
 ```text
 ./mmp-launch.sh --coin %coin% %pool_protocol% --pool %pool_server%:%pool_port% --user %user% --password %password% --api-port %api_port%
 ```
-
-The launcher selects the algorithm from the coin and enables an encrypted connection when TLS is selected in the pool settings. Add native WildRig options at the end if needed. For **Quantus**, add **`--algo quantus`** explicitly: the `QTC` coin code otherwise selects Qubitcoin's `qhash`.
 
 Statistics cover the selected GPUs, including accepted/rejected shares and PCI bus numbers. HiveOS also receives temperature and fan readings. Both packages use plain logs and let the mining OS handle restarts.
 
