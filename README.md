@@ -238,13 +238,15 @@ Options accept `--name value` or `--name=value`. Flags such as `--benchmark` tak
 | `--pool-retry-pause` SECONDS | Pause between connection attempts. | `5` |
 | `--pool-try-main` | Periodically try the primary while mining on a backup. | Off |
 | `--pool-max-rejects` N | Drop the connection after N consecutive rejected shares, then follow retry/failover rules. Each accepted share resets the counter; rejected shares sent as stale do not increase it. Set `0` to disable. | `5` |
-| `--pool-send-stale` | Submit stale shares instead of ignoring them. Pool acceptance is not guaranteed. | Off |
+| `--pool-send-stale` | Always submit stale shares, overriding automatic pool detection. Pool acceptance is not guaranteed. | Off |
 | `--pool-timeout` SECONDS | Connection and handshake timeout; greater than 0. | `10` |
 | `--proxy` ADDRESS | SOCKS5 proxy: `host:port` or `socks5://user:password@host:port`. | Unset |
 | `--tls-verify` 1/0 | Verify TLS certificates. | `1` |
 | `--dns-over-https` PROVIDER | Resolve pool hosts through `google`, `cloudflare` or `alibaba`; `off` uses system DNS. | `off` |
 
 Aliases for `--pool-send-stale`: `--send-stale`, `--send-stales`, `--pool-send-stales`. DNS aliases: `cf` for Cloudflare; `alidns` or `ali` for Alibaba; `none`, `0` or `system` for off.
+
+By default, the miner submits the first stale share to check whether the pool accepts it. Other stale shares are ignored until the reply. An accepted probe enables future stale submissions; a rejected probe disables them. The result is remembered separately for each configured pool for the rest of the miner run, including reconnects and failover. A disconnect before the reply allows another probe on the new connection; shares from previous connections are ignored. `xelishashv3` keeps its existing policy: shares up to two clean-job generations old are submitted, without automatic detection.
 
 ### GPU selection
 
