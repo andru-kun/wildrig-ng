@@ -56,8 +56,8 @@ Find your card below, then check the [supported algorithms](#supported-algorithm
 | --- | --- |
 | Pascal | GeForce **GTX 10 series** |
 | Volta | **TITAN V** |
-| Turing | GeForce **GTX 16 series**, **RTX 20 series** |
-| Ampere | GeForce **RTX 30 series** |
+| Turing | GeForce **GTX 16 series**, **RTX 20 series**, NVIDIA **CMP 30HX**, **CMP 50HX** |
+| Ampere | GeForce **RTX 30 series**, NVIDIA **CMP 70HX**, **CMP 90HX**, **CMP 170HX** |
 | Ada Lovelace | GeForce **RTX 40 series** |
 | Blackwell | GeForce **RTX 50 series** |
 
