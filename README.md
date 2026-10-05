@@ -29,22 +29,36 @@ You need a supported GPU with its vendor driver installed, a wallet for the coin
 
 ```bat
 @echo off
+setlocal
+cd /d "%~dp0" || exit /b 1
+
+:restart
 wildrig-ng.exe --algo kawpow --url stratum+tcp://POOL_HOST:PORT --user YOUR_WALLET --worker rig01 --pass x
-pause
+
+timeout /t 5 /nobreak >nul
+goto restart
 ```
 
-**Linux — run in the miner folder:**
+**Linux — save as `start.sh` next to `wildrig-ng`:**
 
 ```sh
-chmod +x wildrig-ng
-./wildrig-ng --algo kawpow --url stratum+tcp://POOL_HOST:PORT --user YOUR_WALLET --worker rig01 --pass x
+#!/bin/sh
+
+cd -- "$(dirname -- "$0")" || exit 1
+trap 'exit 0' INT TERM
+
+while true; do
+    ./wildrig-ng --algo kawpow --url stratum+tcp://POOL_HOST:PORT --user YOUR_WALLET --worker rig01 --pass x
+
+    sleep 5
+done
 ```
 
-All pool addresses and wallets in this guide are placeholders. On Windows, double-click your `start.bat` file to start mining.
+All pool addresses and wallets in this guide are placeholders. On Windows, double-click `start.bat`. On Linux, run `chmod +x wildrig-ng` once, then `sh start.sh`. The scripts restart the miner five seconds after it exits.
 
 The worker name identifies your rig on the pool. WildRig sends it as `user.worker`; follow your pool's login format and avoid adding the same worker both to `--user` and to `--worker`. Some pools require a specific password instead of `x`.
 
-Press **Ctrl+C** to stop, or **q** in the full-screen interface. For all options supported by your executable, run `wildrig-ng.exe --help` on Windows or `./wildrig-ng --help` on Linux.
+Press **Ctrl+C** to stop a launch script (confirm on Windows if prompted). In the full-screen interface, **q** exits the current miner run; the script restarts it after five seconds. For all options supported by your executable, run `wildrig-ng.exe --help` on Windows or `./wildrig-ng --help` on Linux.
 
 ## Supported graphics cards
 
@@ -143,18 +157,18 @@ Compatibility notes:
 
 ## Everyday examples
 
-On Windows, copy an example below into your `start.bat` file and replace `./wildrig-ng` with `wildrig-ng.exe`. On Linux, run the example from the miner folder.
+For mining examples below, replace the miner command inside the `start.bat` or `start.sh` loop above. On Windows, change `./wildrig-ng` to `wildrig-ng.exe`. Run benchmark examples separately because they have a fixed timeout.
 
 ### Add a backup pool
 
 ```sh
-./wildrig-ng -a kawpow -o stratum+tcp://PRIMARY_POOL:PORT -u YOUR_WALLET -w rig01 -p x -o stratum+tcp://BACKUP_POOL:PORT --pool-try-main
+./wildrig-ng --algo kawpow --url stratum+tcp://PRIMARY_POOL:PORT --user YOUR_WALLET --worker rig01 --pass x --url stratum+tcp://BACKUP_POOL:PORT --pool-try-main
 ```
 
 Pools are tried in the order listed. A backup inherits the primary pool's login, password and worker unless you specify its own immediately after its `--url`. For different accounts:
 
 ```sh
-./wildrig-ng -a kawpow -o PRIMARY_POOL:PORT -u FIRST_WALLET -p x -o BACKUP_POOL:PORT -u SECOND_WALLET -p x
+./wildrig-ng --algo kawpow --url PRIMARY_POOL:PORT --user FIRST_WALLET --pass x --url BACKUP_POOL:PORT --user SECOND_WALLET --pass x
 ```
 
 By default, the miner stays on a working backup. `--pool-try-main` checks the primary about once a minute and returns when it becomes available. All listed pools should serve the selected algorithm.
@@ -162,7 +176,7 @@ By default, the miner stays on a working backup. `--pool-try-main` checks the pr
 ### Select GPUs
 
 ```sh
-./wildrig-ng -a qhash -o POOL_HOST:PORT -u YOUR_WALLET --gpu-list 0,2
+./wildrig-ng --algo qhash --url POOL_HOST:PORT --user YOUR_WALLET --gpu-list 0,2
 ```
 
 Use the GPU indices displayed by the miner. To use only NVIDIA cards, add `--gpu-no-amd --gpu-no-intel`; equivalent vendor switches are available for other rigs.
@@ -170,13 +184,13 @@ Use the GPU indices displayed by the miner. To use only NVIDIA cards, add `--gpu
 ### Run an offline benchmark
 
 ```sh
-./wildrig-ng -a qhash --benchmark-timeout 60
+./wildrig-ng --algo qhash --benchmark-timeout 60
 ```
 
 This runs for 60 seconds without a pool, wallet or developer-fee session. For a DAG benchmark at a specific block:
 
 ```sh
-./wildrig-ng -a kawpow --benchmark-block 5000000 --benchmark-timeout 120
+./wildrig-ng --algo kawpow --benchmark-block 5000000 --benchmark-timeout 120
 ```
 
 Startup, DAG generation and tuning take time. Let performance settle before comparing results; benchmark hashrate does not measure pool acceptance.
@@ -184,7 +198,7 @@ Startup, DAG generation and tuning take time. Let performance settle before comp
 ### Save logs and expose rig statistics
 
 ```sh
-./wildrig-ng -a qhash -o POOL_HOST:PORT -u YOUR_WALLET --ui-plain --log-file miner.log --api-port 4068 --api-worker-id rig01
+./wildrig-ng --algo qhash --url POOL_HOST:PORT --user YOUR_WALLET --ui-plain --log-file miner.log --api-port 4068 --api-worker-id rig01
 ```
 
 Read JSON statistics at `http://127.0.0.1:4068/2/summary`. The API binds to **all network interfaces**, so it can also be reached through the rig's IP address. It has no authentication; use it on a trusted network and restrict access with your firewall. The API worker ID labels monitoring data and does not change the pool login.
@@ -202,7 +216,7 @@ Select **Custom** as the miner and enter:
 - **Hash algorithm:** the algorithm you want to mine, such as `qhash`.
 - **Wallet and worker template:** `%WAL%.%WORKER_NAME%`, unless your pool requires another login format.
 - **Pool URL / Pass:** your pool address and password, usually `x`.
-- **Extra config arguments:** optional settings such as `--gpu-list 0,2 -i 20,20`.
+- **Extra config arguments:** optional settings such as `--gpu-list 0,2 --gpu-intensity 20,20`.
 
 You can enter multiple pool URLs separated by spaces or newlines to add backups. The package manages logging and the API connection; do not add `--api-port` or `--log-file` to Extra config.
 
