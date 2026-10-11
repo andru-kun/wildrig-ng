@@ -11,7 +11,7 @@ Algorithm availability depends on your GPU, driver and miner version. Check the 
 - [Supported graphics cards](#supported-graphics-cards)
 - [Supported algorithms](#supported-algorithms)
 - [Everyday examples](#everyday-examples)
-- [HiveOS and mmpOS](#hiveos-and-mmpos)
+- [HiveOS, mmpOS and SimpleMining](#hiveos-mmpos-and-simplemining)
 - [Command-line options](#command-line-options)
 - [Reading the mining screen](#reading-the-mining-screen)
 - [Troubleshooting](#troubleshooting)
@@ -203,7 +203,7 @@ Startup, DAG generation and tuning take time. Let performance settle before comp
 
 Read JSON statistics at `http://127.0.0.1:4068/2/summary`. The API binds to **all network interfaces**, so it can also be reached through the rig's IP address. It has no authentication; use it on a trusted network and restrict access with your firewall. The API worker ID labels monitoring data and does not change the pool login.
 
-## HiveOS and mmpOS
+## HiveOS, mmpOS and SimpleMining
 
 Download the shared `wildrig-ng-custom-VERSION.tar.gz` from the [latest release](https://github.com/andru-kun/wildrig-ng/releases/latest). One archive contains the HiveOS and mmpOS integration scripts; each platform uses its own hooks. Both report GPU statistics automatically and use Bash, curl and jq; Python is not required on the rig.
 
@@ -229,6 +229,12 @@ Select **Custom miner**, enter the same shared archive download link, and choose
 ```
 
 Statistics cover the selected GPUs, including accepted/rejected shares and PCI bus numbers. HiveOS also receives temperature and fan readings. Both packages use plain logs and let the mining OS handle restarts.
+
+### SimpleMining Custom miner
+
+Use `wildrig-ng-simplemining-VERSION.zip`. It contains the `wildrig-ng-custom/`
+directory with the Linux executable named `miner` and the same four HiveOS
+hook/config files. Select that ZIP as the Custom miner package.
 
 ## Command-line options
 
@@ -278,14 +284,15 @@ By default, the miner submits the first stale share to check whether the pool ac
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| `--gpu-intensity`, `-i` N or LIST | Work per launch as `2^N` work items; accepts `1..31`. Higher values can use more memory. Leave unset for automatic settings. | Automatic / algorithm-specific |
+| `--gpu-intensity`, `-i` N or LIST | Control mining intensity (`1..31`). Higher values may use more GPU memory. Leave unset for automatic selection. | Automatic / algorithm-specific |
 | `--gpu-limit-compute` N or LIST | Request `1..100` percent of GPU compute units. This is not a power limit. | `100` |
 | `--qhash-kernel` 1/2 | Choose QHash mode `1` or `2`. Uses mode `1` if mode `2` is unavailable. Compare them with a benchmark. | `1` |
-| `--pearlhash-kernel` 1/2 | Choose the PearlHash CUDA kernel: `1` uses the original path; `2` uses separate K16384 images and generated operands for 64-filled jobs on sm_86, sm_89 and sm_120, with the classic fallback for zero-filled jobs. On sm_86 it uses optimized SASS, M4096, N262144, an SM-sized window, startup A/joint prefetch and batch16; on sm_89 it uses native prefetch2 and an L2-budget batch. On sm_120 mode `2` needs the separate CUDA 13 image. If unset, sm_120, sm_89 and sm_86 automatically select `2` when NVML reports a current 810 MHz memory clock or the miner successfully applies `--gpu-memory-clock 810`; other cases use `1`. Stable memory clock changes during mining update the kernel between batches. An explicit `1` or `2` overrides automatic selection. | Automatic |
-| `--gpu-temp-limit` C | Pause a GPU at this temperature; accepts `1..150`. | `90` |
+| `--pearlhash-kernel` 1/2 | Choose the PearlHash CUDA kernel: `1` = original, `2` = efficient. Leave unset for automatic selection based on the GPU and memory clock. If `2` is unavailable, the miner uses `1`. | Automatic |
+| `--quantus-kernel` 1/2 | Choose the Quantus kernel: `1` is the default kernel, `2` the efficient kernel. GPUs without an efficient kernel mine with `1`. | `1` |
+| `--gpu-temp-limit` C | Pause a GPU at this temperature; accepts `1..150`. `0` turns the thermal guard off: neither overheating nor a temperature sensor error pauses mining. | `90` |
 | `--gpu-temp-resume` C | Resume below the pause threshold; must be lower than `--gpu-temp-limit`. | `65` |
 
-Start with automatic intensity. Higher intensity does not always mean more hashrate, and it can require more memory. Compute limiting depends on your card and driver; if unavailable, the miner warns and continues with the full GPU. Temperature protection requires working hardware monitoring.
+Start with automatic intensity. Higher values do not always improve hashrate and may use more GPU memory. If compute limiting is unavailable, the miner warns and uses the full GPU. Temperature protection requires working hardware monitoring.
 
 ### Clocks, power and fans
 
@@ -301,23 +308,26 @@ For options accepting a list, one value applies to all selected GPUs. Multiple v
 | `--gpu-memory-offset` N or LIST | Memory clock offset in MHz. | `-5000..5000`; unset |
 | `--gpu-powerlimit` N or LIST | Power limit in watts. | `1..2000`; unset |
 | `--gpu-fan-speed` N or LIST | `0` restores driver control; `1..100` sets fixed fan speed in percent, retained after exit. | `0..100`; unset |
-| `--gpu-fan-target` C or LIST | Adjust fan speed to target the GPU core temperature. Overrides fixed fan speed on the corresponding GPU; restores each fan's previous policy and fixed speed on normal shutdown. Use with caution. | `1..150` °C; unset |
+| `--gpu-fan-target` C or LIST | Adjust fan speed to target the GPU core temperature. Overrides fixed fan speed on the corresponding GPU; pauses that GPU if core temperature is unavailable, or exits with code `1` when watchdog is enabled. Restores each fan's previous policy and fixed speed on normal shutdown. Use with caution. | `1..150` °C; unset |
 | `--gpu-fan-min` N or LIST | Minimum fan speed for automatic control. Requires a fan target. | `0..100`%; default `10` |
 | `--gpu-fan-max` N or LIST | Maximum fan speed for automatic control. Requires a fan target. | `0..100`%; default `100` |
 | `--gpu-reset-oc` | Unlock core/memory clocks and reset offsets at startup. Does not reset power limits or fans. | Off |
 | `--gpu-delay-oc` SECONDS | Delay applying tuning settings after startup. | `0..3600`; default `0` |
 
-Your card may support a smaller range than the options accept. Check the log to confirm which settings the driver applied. With KawPow/ProgPowZ, requested clocks and offsets wait until the first DAG is ready. If you set memory tuning through the miner, it temporarily resets that tuning during subsequent DAG generation and reapplies it after successful preparation.
+Your card may support a smaller range than the options accept. Check the log to confirm which settings the driver applied. Clock settings may be delayed or briefly reset during DAG generation.
 
-For example, `--gpu-fan-target 65 --gpu-fan-min 30 --gpu-fan-max 85` aims for 65 °C while keeping fan commands between 30% and 85%. Values follow the selected mining devices in `--gpu-list` order; a single value applies to every device. A target list leaves devices beyond its end unchanged; missing bounds use 10% and 100%. If a minimum exceeds its maximum, automatic control is skipped for that device with a warning. The temperature may remain above the target if the allowed maximum cannot cool the card enough.
+For example, `--gpu-fan-target 65 --gpu-fan-min 30 --gpu-fan-max 85` aims for 65 °C with fan speed between 30% and 85%. Values follow the selected GPU order. The miner warns about invalid ranges; a GPU may still exceed the target temperature if the maximum fan speed is insufficient.
 
-Automatic control uses a 1 °C deadband and adjusts every three seconds, increasing cooling faster than it reduces it. It starts immediately, independently of `--gpu-delay-oc`, and continues during mining pauses and pool retry waits. The existing temperature limit still pauses a hot GPU. If a temperature sensor disappears after control has started, the controller requests the configured maximum. Driver errors are logged and retried after 30 seconds. Before its first fan command, the target controller reads each fan's policy and commanded speed. On normal shutdown, it restores the previous fixed speed for manual fans and the driver's automatic policy for automatic fans. The previous fixed speed is restored even if it is outside the target controller's minimum/maximum bounds. If the driver cannot report the previous policy or commanded speed, the miner warns and restores driver control instead. Fixed speeds set through `--gpu-fan-speed 1..100` alone remain set after exit; `--gpu-fan-speed 0` returns control to the driver. Hardware fan writes currently use NVIDIA NVML; AMD and Intel monitoring remains read-only, so unsupported fan control is reported in the log.
+With `--gpu-fan-target`, the miner adjusts the fan while it runs and restores its previous setting on normal shutdown. A fixed `--gpu-fan-speed 1..100` remains set after exit; use `--gpu-fan-speed 0` to return control to the driver. Fan control is currently available for NVIDIA GPUs only.
+
+A fan target needs a working core temperature sensor. If the reading is unavailable, mining pauses on that GPU until the reading recovers and the card cools; with `--watchdog`, the miner logs the cause and exits with code `1`. Setting `--gpu-temp-limit 0` disables this safety pause, so the GPU keeps mining without a valid reading and the fan target uses its maximum speed.
 
 ### Interface and logging
 
 | Option | What it does | Default |
 | --- | --- | --- |
 | `--ui-plain` | Use plain logs instead of the full-screen dashboard. Also used automatically when stdout is redirected or no interactive terminal is available. | Dashboard when available |
+| `--ui-wide` | Expand pool and GPU tables to the available console width. Also applies to `--ui-plain`; otherwise the tables use their natural content width. | Off |
 | `--ui-raw-diff` | Display raw pool difficulty instead of expected hashes per share. | Off |
 | `--ui-no-pool-list` | Hide the pool table. | Off |
 | `--log-file` PATH | Append logs and a GPU status report every minute to a file. | Unset |
@@ -331,23 +341,15 @@ Automatic control uses a 1 °C deadband and adjusts every three seconds, increas
 | --- | --- | --- |
 | `--api-port` PORT | Enable HTTP JSON statistics on port `1..65535`. | `0` = off |
 | `--api-worker-id` NAME | Rig name reported by the API. | Machine hostname |
-| `--watchdog` | On any permanently failed GPU, blocked mining or timed-out recovery, record the cause and exit with code `1` so an external supervisor can restart the miner. | Off |
+| `--watchdog` | On any permanently failed GPU, blocked mining, timed-out recovery or unavailable core temperature with an active fan target, record the cause and exit with code `1` so an external supervisor can restart the miner. | Off |
 | `--watchdog-log` PATH | Set the watchdog report location. | `watchdog_log.txt` beside the executable |
 | `--no-adl` | Disable AMD temperature, fan and power monitoring. | Off |
 | `--no-nvml` | Disable NVIDIA temperature, fan and power monitoring. | Off |
 | `--no-igcl` | Disable Intel temperature, fan and power monitoring. | Off |
 
-A GPU enters **STUCK** after 60 seconds of active mining without progress. Pool idle time, thermal pauses, routine initial setup, new-job setup and DAG generation do not count toward this mining timeout. Completed batch slices and completed nonce ranges that produce only declined candidates count as progress, even when they add no visible hashrate.
+A GPU shows **STUCK** after 60 seconds of active mining without progress; pool waits and normal setup do not count. The miner attempts to recover the affected GPU once. Without `--watchdog`, healthy GPUs continue mining, but the process stays idle if every GPU fails.
 
-Like a recoverable driver error, `STUCK` triggers one reinitialization attempt for the affected GPU. If recovery fails or the GPU stalls again before stable mining resumes, it is permanently written off in `STUCK`. With `--watchdog`, any GPU permanently written off in `ERROR` or `STUCK` stops mining on every GPU, records the cause and exits with code `1`, even if other GPUs are healthy. Recovery within the watchdog deadlines does not trigger this exit. Without `--watchdog`, healthy GPUs continue; if all GPUs are written off, the process stays running in idle.
-
-With `--watchdog`, an independent monitor also handles blocked driver calls, including AMD OpenCL calls. After 60 seconds without mining progress, it allows 5 seconds for the GPU to enter recovery. If a blocked call prevents recovery from starting, it records the cause and initiates process exit with code `1`, even before the GPU is permanently written off.
-
-Recovery has a separate 180-second deadline covering its settling delay, driver teardown and reinitialization, and restoration of the current job. It remains enforced while recovery has no active mining batch. These checks run independently of the main loop, GPU health queries and logging, so a blocked call in those paths cannot stop the deadlines.
-
-The miner writes the failure report before disconnecting pools and allows up to 5 seconds for shutdown. If driver cleanup, pool callbacks or worker joins remain blocked, it forces process exit with code `1`.
-
-The watchdog does not launch a replacement miner process by itself. Disabling monitoring can also remove temperature, power, fan readings or related controls.
+With `--watchdog`, a permanent GPU failure, blocked driver call or failed recovery is written to the watchdog log, and the miner exits with code `1`. Use an external supervisor to restart it. Disabling hardware monitoring may also remove temperature, fan and power readings or controls.
 
 ### Offline benchmarking
 
@@ -381,7 +383,7 @@ Use **Page Up / Page Down**, **Up / Down**, **Home / End** or the mouse wheel to
 | Missing kernel / unsupported GPU | Check the algorithm and family tables. Your card may be detected but unable to run the chosen algorithm. Check that your miner version supports this combination. |
 | Not enough GPU memory / DAG allocation failed | Close other GPU applications and check the block/epoch memory requirement. Lower intensity may reduce memory use, but cannot reduce the size of the required DAG. |
 | Cannot connect to a pool | Check hostname, port, TCP versus TLS, proxy settings and network access. Add a backup pool. |
-| `Can't connect to a devfee pool` | The signed fee-list fetch or startup fee-pool probe failed. Check network access, DNS, TLS and proxy settings; the miner retries automatically. Offline benchmarking skips these checks. |
+| `Can't connect to a devfee pool` | Check network access, DNS, TLS and proxy settings. The miner retries automatically. |
 | Login rejected | Check the coin's wallet format, pool account rules, worker syntax and required password. |
 | Repeated invalid shares / self-test failure | Return clocks and offsets to stock, check driver compatibility and read the exact error. |
 | GPU pauses at the temperature limit | Check cooling, fans and power settings. Mining resumes after cooling; sensor support is required. |
