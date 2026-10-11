@@ -205,14 +205,14 @@ Read JSON statistics at `http://127.0.0.1:4068/2/summary`. The API binds to **al
 
 ## HiveOS and mmpOS
 
-Choose `wildrig-ng-custom-VERSION.tar.gz` from the **HiveOS** or **mmpOS** download folder for your mining OS and CPU. The two packages have the same filename but different integration scripts. Both packages report GPU statistics automatically. Both packages use Bash, curl and jq; Python is not required on the rig.
+Download the shared `wildrig-ng-custom-VERSION.tar.gz` from the [latest release](https://github.com/andru-kun/wildrig-ng/releases/latest). One archive contains the HiveOS and mmpOS integration scripts; each platform uses its own hooks. Both report GPU statistics automatically and use Bash, curl and jq; Python is not required on the rig.
 
 ### HiveOS flight sheet
 
 Select **Custom** as the miner and enter:
 
-- **Miner name:** `wildrig`.
-- **Installation URL:** the direct download link for the HiveOS package.
+- **Miner name:** `wildrig-ng-custom`.
+- **Installation URL:** the direct download link for the shared custom-miner archive.
 - **Hash algorithm:** the algorithm you want to mine, such as `qhash`.
 - **Wallet and worker template:** `%WAL%.%WORKER_NAME%`, unless your pool requires another login format.
 - **Pool URL / Pass:** your pool address and password, usually `x`.
@@ -222,7 +222,7 @@ You can enter multiple pool URLs separated by spaces or newlines to add backups.
 
 ### mmpOS miner profile
 
-Select **Custom miner**, enter the mmpOS package download link, and choose your wallet and pool. Use:
+Select **Custom miner**, enter the same shared archive download link, and choose your wallet and pool. Use:
 
 ```text
 ./mmp-launch.sh --coin %coin% %pool_protocol% --pool %pool_server%:%pool_port% --user %user% --password %password% --api-port %api_port%
