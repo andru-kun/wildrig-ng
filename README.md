@@ -113,7 +113,7 @@ Older **GCN 2/3** cards, including Hawaii and Fiji models, can use **KawPow** an
 | **CDNA 3** | Instinct **MI300A**, **MI300X**, **MI308X**, **MI325X** |
 | **CDNA 4** | Instinct **MI350X**, **MI355X** |
 
-Instinct accelerators run on **Linux with ROCm** only. They can mine every AMD algorithm except **PearlHash**. An MI250 or MI250X appears as two GPUs. The MI300A is used like a discrete card, although its memory is shared with the CPU.
+Instinct accelerators run on **Linux with ROCm** only. They can mine every AMD algorithm except **PearlHash** and **Noid**. An MI250 or MI250X appears as two GPUs. The MI300A is used like a discrete card, although its memory is shared with the CPU.
 
 ### Intel Arc
 
@@ -134,24 +134,26 @@ Selected **Arc Pro** and **Flex** cards are also recognized. Check the algorithm
 
 Use the name in the first column with `--algo`. **Yes** means supported on compatible cards from that vendor, subject to the notes below. **—** means unavailable. Your card also needs enough free memory for the selected algorithm. The fee column shows the rate built into this version. A signed fee update can change the active rate; check the dashboard for the rate currently in effect.
 
-| Algorithm | Developer fee | NVIDIA | AMD | Intel Arc |
-| --- | --- | --- | --- | --- |
-| `autolykos2` | 0% | Yes | Yes | — |
-| `kawpow` | 1% | Yes | Yes | Yes |
-| `nexapow` | 1% | Yes | Yes | Yes |
-| `octopus` | 0% | Yes | — | — |
-| `pearlhash` | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — |
-| `progpowz` | 1% | Yes | Yes | Yes |
-| `qhash` | 2% | Yes | Yes | Yes |
-| `quantus` | 2% | Yes | Yes | Yes |
-| `sha256d` | 0% | Yes | Yes | Yes |
-| `xelishashv3` | 1% | Yes | Yes | Yes |
+| Algorithm | Coin | Developer fee | NVIDIA | AMD | Intel Arc |
+| --- | --- | --- | --- | --- | --- |
+| `autolykos2` | Ergo | 0% | Yes | Yes | — |
+| `kawpow` | Ravencoin | 1% | Yes | Yes | Yes |
+| `nexapow` | Nexa | 1% | Yes | Yes | Yes |
+| `noid` | Parano1d | 2% | Turing or newer | RDNA 1–4 | — |
+| `octopus` | Conflux | 0% | Yes | — | — |
+| `pearlhash` | Pearl | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — |
+| `progpowz` | Zano | 1% | Yes | Yes | Yes |
+| `qhash` | Qubitcoin | 2% | Yes | Yes | Yes |
+| `quantus` | Quantus | 2% | Yes | Yes | Yes |
+| `sha256d` | Bitcoin | 0% | Yes | Yes | Yes |
+| `xelishashv3` | Xelis | 1% | Yes | Yes | Yes |
 
 Compatibility notes:
 
 - NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash requires Tensor Cores; Pascal and GTX 16 cards without Tensor Cores do not meet that requirement.
 - AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 2/3/4.
-- AMD Instinct accelerators (CDNA 1–4) need Linux with ROCm and support every AMD algorithm except PearlHash.
+- Noid supports RDNA 1–4 with an OpenCL driver. It has been validated on RX 5600 XT, RX 6800 XT, RX 7900 XTX and RX 9070 XT. Other models in these families, including RX 9060 XT (`gfx1200`), have not yet been validated.
+- AMD Instinct accelerators (CDNA 1–4) need Linux with ROCm and support every AMD algorithm except PearlHash and Noid.
 - Autolykos2 needs a card with 8 GB: its table is 6.8 GiB in 2026 and grows by 5 % about every 71 days (7.1 GiB from block 1,894,400, 7.5 GiB from 1,945,600), so 8 GB cards run out of room around March 2027.
 - Use the pool address and port provided for your chosen coin and algorithm.
 
@@ -308,7 +310,7 @@ For options accepting a list, one value applies to all selected GPUs. Multiple v
 | `--gpu-memory-offset` N or LIST | Memory clock offset in MHz. | `-5000..5000`; unset |
 | `--gpu-powerlimit` N or LIST | Power limit in watts. | `1..2000`; unset |
 | `--gpu-fan-speed` N or LIST | `0` restores driver control; `1..100` sets fixed fan speed in percent, retained after exit. | `0..100`; unset |
-| `--gpu-fan-target` C or LIST | Adjust fan speed to target the GPU core temperature. Overrides fixed fan speed on the corresponding GPU; pauses that GPU if core temperature is unavailable, or exits with code `1` when watchdog is enabled. Restores each fan's previous policy and fixed speed on normal shutdown. Use with caution. | `1..150` °C; unset |
+| `--gpu-fan-target` C or LIST | Adjust fan speed to target the GPU core temperature. Overrides fixed fan speed on the corresponding GPU; pauses that GPU if core temperature is unavailable. Restores each fan's previous policy and fixed speed on normal shutdown. Use with caution. | `1..150` °C; unset |
 | `--gpu-fan-min` N or LIST | Minimum fan speed for automatic control. Requires a fan target. | `0..100`%; default `10` |
 | `--gpu-fan-max` N or LIST | Maximum fan speed for automatic control. Requires a fan target. | `0..100`%; default `100` |
 | `--gpu-reset-oc` | Unlock core/memory clocks and reset offsets at startup. Does not reset power limits or fans. | Off |
@@ -320,7 +322,7 @@ For example, `--gpu-fan-target 65 --gpu-fan-min 30 --gpu-fan-max 85` aims for 65
 
 With `--gpu-fan-target`, the miner adjusts the fan while it runs and restores its previous setting on normal shutdown. A fixed `--gpu-fan-speed 1..100` remains set after exit; use `--gpu-fan-speed 0` to return control to the driver. Fan control is currently available for NVIDIA GPUs only.
 
-A fan target needs a working core temperature sensor. If the reading is unavailable, mining pauses on that GPU until the reading recovers and the card cools; with `--watchdog`, the miner logs the cause and exits with code `1`. Setting `--gpu-temp-limit 0` disables this safety pause, so the GPU keeps mining without a valid reading and the fan target uses its maximum speed.
+A fan target needs a working core temperature sensor. If the reading is unavailable, mining pauses on that GPU until the reading recovers and the card cools; the watchdog does not restart the miner for it. Setting `--gpu-temp-limit 0` disables this safety pause, so the GPU keeps mining without a valid reading and the fan target uses its maximum speed.
 
 ### Interface and logging
 
@@ -341,15 +343,30 @@ A fan target needs a working core temperature sensor. If the reading is unavaila
 | --- | --- | --- |
 | `--api-port` PORT | Enable HTTP JSON statistics on port `1..65535`. | `0` = off |
 | `--api-worker-id` NAME | Rig name reported by the API. | Machine hostname |
-| `--watchdog` | On any permanently failed GPU, blocked mining, timed-out recovery or unavailable core temperature with an active fan target, record the cause and exit with code `1` so an external supervisor can restart the miner. | Off |
-| `--watchdog-log` PATH | Set the watchdog report location. | `watchdog_log.txt` beside the executable |
+| `--no-watchdog` | Turn off the built-in watchdog: a failed GPU stays in ERROR while the others mine, and the miner stays idle if every GPU fails. | Watchdog on |
+| `--watchdog-log` PATH | Set where the watchdog records failed GPUs and miner crashes. | `watchdog_log.txt` beside the executable |
 | `--no-adl` | Disable AMD temperature, fan and power monitoring. | Off |
 | `--no-nvml` | Disable NVIDIA temperature, fan and power monitoring. | Off |
 | `--no-igcl` | Disable Intel temperature, fan and power monitoring. | Off |
 
-A GPU shows **STUCK** after 60 seconds of active mining without progress; pool waits and normal setup do not count. The miner attempts to recover the affected GPU once. Without `--watchdog`, healthy GPUs continue mining, but the process stays idle if every GPU fails.
+On Windows, AMD sensor monitoring supports Overdrive 5, 6, N (7) and newer drivers. Available readings depend on the GPU and driver, including Radeon Pro drivers; unsupported readings show `n/a`. For troubleshooting, use `--print-debug --log-file miner.log` to record adapter matching and sensor availability.
 
-With `--watchdog`, a permanent GPU failure, blocked driver call or failed recovery is written to the watchdog log, and the miner exits with code `1`. Use an external supervisor to restart it. Disabling hardware monitoring may also remove temperature, fan and power readings or controls.
+A GPU shows **STUCK** after 60 seconds of active mining without progress; pool waits and normal setup do not count. The miner attempts to recover the affected GPU once.
+
+The built-in watchdog is on by default, except in benchmark mode. The miner then runs as a child process, so the task manager shows two `wildrig-ng` processes. When a GPU fails in a way that only a new process can recover from — an NVIDIA driver error, a GPU that stays STUCK or does not finish its recovery in time, or every GPU failing — the miner restarts itself without that GPU:
+
+* the failed GPU is written to the watchdog log and stays excluded: it is shown as ERROR and is not initialised, overclocked or fan-controlled;
+* when an NVIDIA GPU's failure takes other GPUs down with it, only the GPU that failed first is excluded; the others start again normally;
+* if the driver no longer reports that GPU, for example after it dropped off the PCIe bus, it is still listed as ERROR without sensor readings and keeps its number, so `--gpu-list` and the per-GPU settings of the other cards stay on those cards;
+* the exclusion lasts until you close the miner. The next start, for example after you change the card's overclock, uses every GPU again;
+* the restart follows after 5 seconds, and after up to 60 seconds when failures repeat;
+* a GPU whose failure does not affect the others, such as an AMD or Intel OpenCL error, stays in ERROR while the rest keep mining, without a restart;
+* the miner keeps restarting as long as any GPU is left, also after the miner process itself crashes;
+* once every GPU has failed, the miner keeps running idle and shows all of them as ERROR: it connects to no pool and mines nothing until you close it and start it again.
+
+With `--no-watchdog`, healthy GPUs continue mining after a failure, the failed GPU stays in ERROR until the miner is restarted, and the process stays idle if every GPU fails. The `--watchdog` option of earlier versions is no longer needed; it is ignored with a warning.
+
+Disabling hardware monitoring may also remove temperature, fan and power readings or controls.
 
 ### Offline benchmarking
 
