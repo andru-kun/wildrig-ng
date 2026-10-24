@@ -60,6 +60,8 @@ The worker name identifies your rig on the pool. WildRig sends it as `user.worke
 
 Press **Ctrl+C** to stop a launch script (confirm on Windows if prompted). In the full-screen interface, **q** exits the current miner run; the script restarts it after five seconds. For all options supported by your executable, run `wildrig-ng.exe --help` on Windows or `./wildrig-ng --help` on Linux.
 
+To keep mining after disconnecting from SSH, run the Linux script in `screen` or `tmux`, or start it with `nohup sh start.sh > start.log 2>&1 &`.
+
 ## Supported graphics cards
 
 Find your card below, then check the [supported algorithms](#supported-algorithms) to see what it can mine.
@@ -87,7 +89,7 @@ Find your card below, then check the [supported algorithms](#supported-algorithm
 | **Hopper** | NVIDIA **H20**, **H100**, **H200**, **H800** |
 | **Blackwell** | NVIDIA **B100**, **B200**, **B300** |
 
-Available algorithms depend on the model and free GPU memory. **PearlHash requires Tensor Cores**, so Pascal cards (P4, P40, P100 and GTX 10 series) and GTX 16 cards cannot mine it.
+Available algorithms depend on the model and free GPU memory.
 
 ### AMD Radeon
 
@@ -99,8 +101,6 @@ Available algorithms depend on the model and free GPU memory. **PearlHash requir
 | RDNA 2 | Radeon **RX 6000 series** |
 | RDNA 3 | Radeon **RX 7000 series** |
 | RDNA 4 | Radeon **RX 9000 series** |
-
-**PearlHash requires RDNA 2 or newer** from the families listed above: RX 6000, RX 7000 or RX 9000 series.
 
 Older **GCN 2/3** cards, including Hawaii and Fiji models, can use **KawPow** and **ProgPowZ**. The other listed algorithms require newer AMD cards.
 
@@ -128,7 +128,7 @@ Selected **Arc Pro** and **Flex** cards are also recognized. Check the algorithm
 
 - **Available algorithms vary by card.** Check the algorithm table and compatibility notes before starting.
 - **Free video memory matters.** Some algorithms need a large dataset called a DAG. Its size depends on the coin and block height, so there is no single minimum memory requirement for every algorithm. Other GPU applications reduce the memory available for mining.
-- **Integrated graphics are skipped by default.** Use `--gpu-allow-igpu` to enable eligible integrated GPUs. They still need to support the selected algorithm and have enough available memory.
+- **Integrated graphics are skipped by default, except AMD BC-250.** BC-250 does not need `--gpu-allow-igpu`. Use this option to enable other eligible integrated GPUs. Every GPU still needs to support the selected algorithm and have enough available memory.
 
 ## Supported algorithms
 
@@ -139,9 +139,9 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 | `autolykos2` | Ergo | 0% | Yes | Yes | — |
 | `kawpow` | Ravencoin | 1% | Yes | Yes | Yes |
 | `nexapow` | Nexa | 1% | Yes | Yes | Yes |
-| `noid` | Parano1d | 2% | Turing or newer | RDNA 1–4 | — |
+| `noid` | Parano1d | 2% | Volta or newer | RDNA 1–4 | — |
 | `octopus` | Conflux | 0% | Yes | — | — |
-| `pearlhash` | Pearl | 0% | Tensor Core GPUs, Volta or newer | RDNA 2/3/4 | — |
+| `pearlhash` | Pearl | 0% | Yes (except Tesla P100) | RDNA 1–4 | — |
 | `progpowz` | Zano | 1% | Yes | Yes | Yes |
 | `qhash` | Qubitcoin | 2% | Yes | Yes | Yes |
 | `quantus` | Quantus | 2% | Yes | Yes | Yes |
@@ -150,11 +150,11 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 
 Compatibility notes:
 
-- NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash requires Tensor Cores; Pascal and GTX 16 cards without Tensor Cores do not meet that requirement.
-- AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 2/3/4.
+- NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash supports Pascal (GTX 10 series, P4, P40), Volta and newer GPUs; Tesla P100 is not supported.
+- AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 1–4.
 - Noid supports RDNA 1–4 with an OpenCL driver. It has been validated on RX 5600 XT, RX 6800 XT, RX 7900 XTX and RX 9070 XT. Other models in these families, including RX 9060 XT (`gfx1200`), have not yet been validated.
 - AMD Instinct accelerators (CDNA 1–4) need Linux with ROCm and support every AMD algorithm except PearlHash and Noid.
-- Autolykos2 needs a card with 8 GB: its table is 6.8 GiB in 2026 and grows by 5 % about every 71 days (7.1 GiB from block 1,894,400, 7.5 GiB from 1,945,600), so 8 GB cards run out of room around March 2027.
+- Autolykos2 currently needs at least 8 GB of GPU memory, and its requirement grows over time. Check that your card has enough free memory before mining.
 - Use the pool address and port provided for your chosen coin and algorithm.
 
 ## Everyday examples
@@ -215,10 +215,12 @@ Select **Custom** as the miner and enter:
 
 - **Miner name:** `wildrig-ng-custom`.
 - **Installation URL:** the direct download link for the shared custom-miner archive.
-- **Hash algorithm:** the algorithm you want to mine, such as `qhash`.
+- **Hash algorithm:** the algorithm you want to mine, such as `qhash`; may be blank when set in Extra config.
 - **Wallet and worker template:** `%WAL%.%WORKER_NAME%`, unless your pool requires another login format.
 - **Pool URL / Pass:** your pool address and password, usually `x`.
 - **Extra config arguments:** optional settings such as `--gpu-list 0,2 --gpu-intensity 20,20`.
+
+If you leave **Hash algorithm** blank, set it in **Extra config arguments**, for example `--algo quantus`.
 
 You can enter multiple pool URLs separated by spaces or newlines to add backups. The package manages logging and the API connection; do not add `--api-port` or `--log-file` to Extra config.
 
@@ -257,25 +259,25 @@ Options accept `--name value` or `--name=value`. Flags such as `--benchmark` tak
 | Option | What it does | Default |
 | --- | --- | --- |
 | `--pool-retries` N | Connection attempts per pool before moving to the next; at least 1. | `1` |
-| `--pool-retry-pause` SECONDS | Pause between connection attempts. | `5` |
+| `--pool-retry-pause` SECONDS | Pause between connection attempts; at least 1. | `5` |
 | `--pool-try-main` | Periodically try the primary while mining on a backup. | Off |
-| `--pool-max-rejects` N | Drop the connection after N consecutive rejected shares, then follow retry/failover rules. Each accepted share resets the counter; rejected shares sent as stale do not increase it. Set `0` to disable. | `5` |
+| `--pool-max-rejects` N | Disconnect after N consecutive rejected shares and follow the pool retry or failover rules. Set `0` to disable. | `5` |
 | `--pool-send-stale` | Always submit stale shares, overriding automatic pool detection. Pool acceptance is not guaranteed. | Off |
 | `--pool-timeout` SECONDS | Connection and handshake timeout; greater than 0. | `10` |
 | `--proxy` ADDRESS | SOCKS5 proxy: `host:port`, `socks5://user:password@host:port` or `socks5h://user:password@host:port`. | Unset |
-| `--tls-verify` 1/0 | Verify TLS certificates. | `1` |
-| `--dns-over-https` PROVIDER | Resolve pool hosts through `google`, `cloudflare` or `alibaba`; `off` uses system DNS. | `off` |
+| `--tls-verify` | Verify pool TLS certificates. | Off |
+| `--dns-over-https` PROVIDER | Resolve pool hosts through `google`, `cloudflare` or `alibaba`; `off` uses system DNS. Ignored when `--proxy` is set (the proxy resolves pool hosts itself). | `off` |
 
 Aliases for `--pool-send-stale`: `--send-stale`, `--send-stales`, `--pool-send-stales`. DNS aliases: `cf` for Cloudflare; `alidns` or `ali` for Alibaba; `none`, `0` or `system` for off.
 
-By default, the miner submits the first stale share to check whether the pool accepts it. Other stale shares are ignored until the reply. An accepted probe enables future stale submissions; a rejected probe disables them. The result is remembered separately for each configured pool for the rest of the miner run, including reconnects and failover. A disconnect before the reply allows another probe on the new connection; shares from previous connections are ignored. `xelishashv3` keeps its existing policy: shares up to two clean-job generations old are submitted, without automatic detection.
+The miner checks whether each pool accepts stale shares and adjusts submissions automatically. Use `--pool-send-stale` only if you need to override this behavior. `xelishashv3` uses its own stale-share policy.
 
 ### GPU selection
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| `--gpu-list`, `-d` LIST | Comma-separated GPU indices, such as `0,2,3`. Alias: `--devices`. | All eligible GPUs |
-| `--gpu-allow-igpu` | Include eligible integrated GPUs. | Off |
+| `--gpu-list`, `-d` LIST | Comma-separated GPU indices shown by the miner, such as `0,2,3`. List each GPU once. Alias: `--devices`. | All eligible GPUs |
+| `--gpu-allow-igpu` | Include eligible integrated GPUs. AMD BC-250 is already included by default. | Off |
 | `--gpu-no-amd` | Skip AMD cards. | Off |
 | `--gpu-no-nvidia` | Skip NVIDIA cards. | Off |
 | `--gpu-no-intel` | Skip Intel cards. | Off |
@@ -289,8 +291,9 @@ By default, the miner submits the first stale share to check whether the pool ac
 | `--gpu-intensity`, `-i` N or LIST | Control mining intensity (`1..31`). Higher values may use more GPU memory. Leave unset for automatic selection. | Automatic / algorithm-specific |
 | `--gpu-limit-compute` N or LIST | Request `1..100` percent of GPU compute units. This is not a power limit. | `100` |
 | `--qhash-kernel` 1/2 | Choose QHash mode `1` or `2`. Uses mode `1` if mode `2` is unavailable. Compare them with a benchmark. | `1` |
-| `--pearlhash-kernel` 1/2 | Choose the PearlHash CUDA kernel: `1` = original, `2` = efficient. Leave unset for automatic selection based on the GPU and memory clock. If `2` is unavailable, the miner uses `1`. | Automatic |
+| `--pearlhash-kernel` 1/2 | Choose the PearlHash kernel: `1` is the default kernel, `2` the efficient kernel. GPUs without an efficient kernel mine with `1`. | Automatic |
 | `--quantus-kernel` 1/2 | Choose the Quantus kernel: `1` is the default kernel, `2` the efficient kernel. GPUs without an efficient kernel mine with `1`. | `1` |
+| `--noid-kernel` 1/2 | Choose the Noid kernel: `1` is the default kernel, `2` the efficient kernel. GPUs without an efficient kernel mine with `1`. | `1` |
 | `--gpu-temp-limit` C | Pause a GPU at this temperature; accepts `1..150`. `0` turns the thermal guard off: neither overheating nor a temperature sensor error pauses mining. | `90` |
 | `--gpu-temp-resume` C | Resume below the pause threshold; must be lower than `--gpu-temp-limit`. | `65` |
 
@@ -322,7 +325,7 @@ For example, `--gpu-fan-target 65 --gpu-fan-min 30 --gpu-fan-max 85` aims for 65
 
 With `--gpu-fan-target`, the miner adjusts the fan while it runs and restores its previous setting on normal shutdown. A fixed `--gpu-fan-speed 1..100` remains set after exit; use `--gpu-fan-speed 0` to return control to the driver. Fan control is currently available for NVIDIA GPUs only.
 
-A fan target needs a working core temperature sensor. If the reading is unavailable, mining pauses on that GPU until the reading recovers and the card cools; the watchdog does not restart the miner for it. Setting `--gpu-temp-limit 0` disables this safety pause, so the GPU keeps mining without a valid reading and the fan target uses its maximum speed.
+A fan target needs a working core temperature sensor. If its reading is unavailable, mining pauses on that GPU; a stalled driver read or clock change can pause all GPUs. Check the log. Mining resumes when the driver responds and the cards cool. Setting `--gpu-temp-limit 0` disables these safety pauses, so mining can continue without reliable temperature readings and the fan target uses its maximum speed.
 
 ### Interface and logging
 
@@ -337,6 +340,8 @@ A fan target needs a working core temperature sensor. If the reading is unavaila
 | `--help`, `-h` | Print help and exit. | — |
 | `--version`, `-V` | Print version and exit. | — |
 
+A GPU that is still starting appears as `INIT`. Use `--ui-plain` to see driver startup messages.
+
 ### Monitoring and recovery
 
 | Option | What it does | Default |
@@ -349,22 +354,13 @@ A fan target needs a working core temperature sensor. If the reading is unavaila
 | `--no-nvml` | Disable NVIDIA temperature, fan and power monitoring. | Off |
 | `--no-igcl` | Disable Intel temperature, fan and power monitoring. | Off |
 
-On Windows, AMD sensor monitoring supports Overdrive 5, 6, N (7) and newer drivers. Available readings depend on the GPU and driver, including Radeon Pro drivers; unsupported readings show `n/a`. For troubleshooting, use `--print-debug --log-file miner.log` to record adapter matching and sensor availability.
+On Windows, AMD sensor readings depend on the GPU and driver; unsupported readings show `n/a`. For troubleshooting, use `--print-debug --log-file miner.log` to record sensor availability.
 
-A GPU shows **STUCK** after 60 seconds of active mining without progress; pool waits and normal setup do not count. The miner attempts to recover the affected GPU once.
+A GPU shows **STUCK** when mining, job preparation or startup stops making progress. The miner attempts recovery where possible. Check the log, driver, clocks and available memory if the GPU stays STUCK.
 
-The built-in watchdog is on by default, except in benchmark mode. The miner then runs as a child process, so the task manager shows two `wildrig-ng` processes. When a GPU fails in a way that only a new process can recover from — an NVIDIA driver error, a GPU that stays STUCK or does not finish its recovery in time, or every GPU failing — the miner restarts itself without that GPU:
+The built-in watchdog is on by default, except in benchmark mode; you may see two `wildrig-ng` processes. After an NVIDIA driver failure that requires a restart, it restarts the miner and excludes the failed GPU for the rest of that run. The GPU appears as **ERROR**, and the reason is recorded in the watchdog log. Close and reopen the miner to retry an excluded GPU.
 
-* the failed GPU is written to the watchdog log and stays excluded: it is shown as ERROR and is not initialised, overclocked or fan-controlled;
-* when an NVIDIA GPU's failure takes other GPUs down with it, only the GPU that failed first is excluded; the others start again normally;
-* if the driver no longer reports that GPU, for example after it dropped off the PCIe bus, it is still listed as ERROR without sensor readings and keeps its number, so `--gpu-list` and the per-GPU settings of the other cards stay on those cards;
-* the exclusion lasts until you close the miner. The next start, for example after you change the card's overclock, uses every GPU again;
-* the restart follows after 5 seconds, and after up to 60 seconds when failures repeat;
-* a GPU whose failure does not affect the others, such as an AMD or Intel OpenCL error, stays in ERROR while the rest keep mining, without a restart;
-* the miner keeps restarting as long as any GPU is left, also after the miner process itself crashes;
-* once every GPU has failed, the miner keeps running idle and shows all of them as ERROR: it connects to no pool and mines nothing until you close it and start it again.
-
-With `--no-watchdog`, healthy GPUs continue mining after a failure, the failed GPU stays in ERROR until the miner is restarted, and the process stays idle if every GPU fails. The `--watchdog` option of earlier versions is no longer needed; it is ignored with a warning.
+If a GPU hangs in the driver, it stays **STUCK** while healthy GPUs continue mining; that alone does not restart the miner. An AMD or Intel GPU failure can likewise leave the other GPUs mining. If no GPU is detected at startup, the watchdog retries detection. If every GPU fails, the miner stays idle. With `--no-watchdog`, failed GPUs stay in **ERROR** until the miner is restarted.
 
 Disabling hardware monitoring may also remove temperature, fan and power readings or controls.
 
@@ -389,6 +385,7 @@ The dashboard shows GPU hashrates, available sensor readings, share counters, po
 - **Hashrate:** local mining speed. Pool estimates fluctuate because they are calculated from submitted shares over time.
 - **DAG generation / tuning:** preparation before normal mining speed is reached. Allow it to complete before comparing performance.
 - **STUCK:** the GPU has stopped making mining progress; the miner attempts to reinitialize it. See [Monitoring and recovery](#monitoring-and-recovery).
+- **ERROR:** the GPU failed; check the log for the reason.
 
 Use **Page Up / Page Down**, **Up / Down**, **Home / End** or the mouse wheel to scroll the log. A paused hot GPU resumes after cooling to its configured resume threshold.
 
@@ -396,17 +393,17 @@ Use **Page Up / Page Down**, **Up / Down**, **Home / End** or the mouse wheel to
 
 | Symptom | What to check |
 | --- | --- |
-| No usable GPU found | Install the vendor driver with OpenCL support for AMD/Intel. Check that your GPU selection options do not exclude the card. Integrated GPUs are skipped by default. |
+| No usable GPU found | Install the vendor driver with OpenCL support for AMD/Intel, and check GPU selection options. Integrated GPUs are skipped by default except AMD BC-250. With the watchdog enabled, the miner retries detection automatically. |
 | Missing kernel / unsupported GPU | Check the algorithm and family tables. Your card may be detected but unable to run the chosen algorithm. Check that your miner version supports this combination. |
 | Not enough GPU memory / DAG allocation failed | Close other GPU applications and check the block/epoch memory requirement. Lower intensity may reduce memory use, but cannot reduce the size of the required DAG. |
 | Cannot connect to a pool | Check hostname, port, TCP versus TLS, proxy settings and network access. Add a backup pool. |
-| `Can't connect to a devfee pool` | Check network access, DNS, TLS and proxy settings. The miner retries automatically. |
+| `Can't connect to a devfee pool` | Check network access, DNS, TLS and proxy settings, and the system clock. The miner retries automatically. |
 | Login rejected | Check the coin's wallet format, pool account rules, worker syntax and required password. |
 | Repeated invalid shares / self-test failure | Return clocks and offsets to stock, check driver compatibility and read the exact error. |
 | GPU pauses at the temperature limit | Check cooling, fans and power settings. Mining resumes after cooling; sensor support is required. |
 | Tuning setting rejected | Check privileges and driver/card support. The log reports failures for individual settings. |
 | Dashboard looks wrong in a service or terminal | Add `--ui-plain`; use `--log-file` to retain output. |
-| A parameter seems to have no effect | Read startup warnings and run `--help`. Unknown options and many invalid values are ignored with a warning; missing required settings and incompatible temperature thresholds stop startup. |
+| A parameter seems to have no effect | Read startup warnings and run `--help`. Invalid settings may be ignored or stop startup. |
 
 When reporting a problem, include the miner version, operating system, GPU model, driver version, algorithm and relevant log lines. Remove passwords and proxy credentials before sharing logs.
 
