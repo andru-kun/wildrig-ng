@@ -141,7 +141,7 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 | `nexapow` | Nexa | 1% | Yes | Yes | Yes |
 | `noid` | Parano1d | 2% | Volta or newer | RDNA 1–4 | — |
 | `octopus` | Conflux | 0% | Yes | — | — |
-| `pearlhash` | Pearl | 0% | Yes (except Tesla P100) | RDNA 1–4 | — |
+| `pearlhash` | Pearl | 0% | Pascal or newer (except Tesla P100) | RDNA 1–4 | — |
 | `progpowz` | Zano | 1% | Yes | Yes | Yes |
 | `qhash` | Qubitcoin | 2% | Yes | Yes | Yes |
 | `quantus` | Quantus | 2% | Yes | Yes | Yes |
@@ -150,8 +150,8 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 
 Compatibility notes:
 
-- NVIDIA support generally starts with Pascal (GTX 10 series). PearlHash supports Pascal (GTX 10 series, P4, P40), Volta and newer GPUs; Tesla P100 is not supported.
-- AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ. PearlHash requires RDNA 1–4.
+- NVIDIA support generally starts with Pascal (GTX 10 series).
+- AMD support starts with Polaris for algorithms other than KawPow/ProgPowZ.
 - Noid supports RDNA 1–4 with an OpenCL driver. It has been validated on RX 5600 XT, RX 6800 XT, RX 7900 XTX and RX 9070 XT. Other models in these families, including RX 9060 XT (`gfx1200`), have not yet been validated.
 - AMD Instinct accelerators (CDNA 1–4) need Linux with ROCm and support every AMD algorithm except PearlHash and Noid.
 - Autolykos2 currently needs at least 8 GB of GPU memory, and its requirement grows over time. Check that your card has enough free memory before mining.
