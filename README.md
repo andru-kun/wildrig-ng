@@ -136,12 +136,12 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 
 | Algorithm | Coin | Developer fee | NVIDIA | AMD | Intel Arc |
 | --- | --- | --- | --- | --- | --- |
-| `autolykos2` | Ergo | 0% | Yes | Yes | — |
+| `autolykos2` | Ergo | 0% | Yes | Yes | Yes |
 | `kawpow` | Ravencoin | 1% | Yes | Yes | Yes |
 | `nexapow` | Nexa | 1% | Yes | Yes | Yes |
 | `noid` | Parano1d | 2% | Volta or newer | RDNA 1–4 | — |
 | `octopus` | Conflux | 0% | Yes | — | — |
-| `pearlhash` | Pearl | 0% | Pascal or newer (except Tesla P100) | RDNA 1–4 | — |
+| `pearlhash` | Pearl | 0% | Pascal or newer (except Tesla P100) | RDNA 1–4 | Yes |
 | `progpowz` | Zano | 1% | Yes | Yes | Yes |
 | `qhash` | Qubitcoin | 2% | Yes | Yes | Yes |
 | `quantus` | Quantus | 2% | Yes | Yes | Yes |
@@ -301,7 +301,7 @@ Start with automatic intensity. Higher values do not always improve hashrate and
 
 ### Clocks, power and fans
 
-These controls are available for supported NVIDIA cards. For AMD and Intel, use your usual GPU tuning software. Some NVIDIA settings require running the miner as administrator on Windows or as root on Linux. Check the log to see whether each setting was applied.
+These controls are available for supported NVIDIA cards, and core clock locking (`--gpu-core-clock`, `--gpu-reset-oc`), power limit (`--gpu-powerlimit`) and fan control (`--gpu-fan-speed`, `--gpu-fan-target`) are also available for supported Intel Arc cards. For AMD cards, use your usual GPU tuning software. Some settings require running the miner as administrator on Windows or as root on Linux. Check the log to see whether each setting was applied.
 
 For options accepting a list, one value applies to all selected GPUs. Multiple values follow the **selected GPU order**. For example, `--gpu-list 2,0 --gpu-powerlimit 180,120` requests 180 W on GPU 2 and 120 W on GPU 0. These are syntax examples, not recommended limits for every card.
 
@@ -323,7 +323,7 @@ Your card may support a smaller range than the options accept. Check the log to 
 
 For example, `--gpu-fan-target 65 --gpu-fan-min 30 --gpu-fan-max 85` aims for 65 °C with fan speed between 30% and 85%. Values follow the selected GPU order. The miner warns about invalid ranges; a GPU may still exceed the target temperature if the maximum fan speed is insufficient.
 
-With `--gpu-fan-target`, the miner adjusts the fan while it runs and restores its previous setting on normal shutdown. A fixed `--gpu-fan-speed 1..100` remains set after exit; use `--gpu-fan-speed 0` to return control to the driver. Fan control is currently available for NVIDIA GPUs only.
+With `--gpu-fan-target`, the miner adjusts the fan while it runs and restores its previous setting on normal shutdown. A fixed `--gpu-fan-speed 1..100` remains set after exit; use `--gpu-fan-speed 0` to return control to the driver. Fan control is currently available for NVIDIA and Intel Arc GPUs.
 
 A fan target needs a working core temperature sensor. If its reading is unavailable, mining pauses on that GPU; a stalled driver read or clock change can pause all GPUs. Check the log. Mining resumes when the driver responds and the cards cool. Setting `--gpu-temp-limit 0` disables these safety pauses, so mining can continue without reliable temperature readings and the fan target uses its maximum speed.
 
@@ -374,6 +374,8 @@ Disabling hardware monitoring may also remove temperature, fan and power reading
 | `--benchmark-timeout` SECONDS | Enable benchmarking and exit after this duration. | `0` = until stopped |
 
 Each `--benchmark-*` option enables benchmark mode by itself. Any pool settings are ignored in this mode.
+
+Benchmark mode automatically enables CPU verification of PearlHash shares on CUDA and OpenCL.
 
 ## Reading the mining screen
 
