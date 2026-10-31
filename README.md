@@ -15,6 +15,7 @@ Algorithm availability depends on your GPU, driver and miner version. Check the 
 - [Command-line options](#command-line-options)
 - [Reading the mining screen](#reading-the-mining-screen)
 - [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ## Quick start
 
@@ -266,7 +267,7 @@ Options accept `--name value` or `--name=value`. Flags such as `--benchmark` tak
 | `--pool-timeout` SECONDS | Connection and handshake timeout; greater than 0. | `10` |
 | `--proxy` ADDRESS | SOCKS5 proxy: `host:port`, `socks5://user:password@host:port` or `socks5h://user:password@host:port`. | Unset |
 | `--tls-verify` | Verify pool TLS certificates. | Off |
-| `--dns-over-https` PROVIDER | Resolve pool hosts through `google`, `cloudflare` or `alibaba`; `off` uses system DNS. Ignored when `--proxy` is set (the proxy resolves pool hosts itself). | `off` |
+| `--dns-over-https` [PROVIDER] | Resolve pool hosts through `google`, `cloudflare` or `alibaba`; `off` uses system DNS. Without a provider (`--dns-over-https` alone), Cloudflare is used. Ignored when `--proxy` is set (the proxy resolves pool hosts itself). | Off: system DNS |
 
 Aliases for `--pool-send-stale`: `--send-stale`, `--send-stales`, `--pool-send-stales`. DNS aliases: `cf` for Cloudflare; `alidns` or `ali` for Alibaba; `none`, `0` or `system` for off.
 
@@ -331,10 +332,12 @@ A fan target needs a working core temperature sensor. If its reading is unavaila
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| `--ui-plain` | Use plain logs instead of the full-screen dashboard. Also used automatically when stdout is redirected or no interactive terminal is available. | Dashboard when available |
+| `--ui-plain` | Use plain logs instead of the full-screen dashboard. Also used automatically when stdout is redirected or no interactive terminal is available, and when a mining GPU shows the desktop on a monitor and the dashboard would be drawn there (on Windows; on Linux in a terminal window on the local desktop, not over SSH, in screen or tmux): redrawing the dashboard costs that GPU hashrate. | Dashboard when available |
+| `--ui-full` | Keep the dashboard even when a mining GPU shows the desktop it is drawn on. That GPU then mines slower. | Off |
 | `--ui-wide` | Expand pool and GPU tables to the available console width. Also applies to `--ui-plain`; otherwise the tables use their natural content width. | Off |
 | `--ui-raw-diff` | Display raw pool difficulty instead of expected hashes per share. | Off |
 | `--ui-no-pool-list` | Hide the pool table. | Off |
+| `--ui-no-color` | Show the dashboard and plain logs without colors. Bold, dim and inverse text stay. | Off |
 | `--log-file` PATH | Append logs and a GPU status report every minute to a file. | Unset |
 | `--print-debug` | Include extra details for troubleshooting. Logs may contain wallet/login information. | Off |
 | `--help`, `-h` | Print help and exit. | — |
@@ -350,6 +353,7 @@ A GPU that is still starting appears as `INIT`. Use `--ui-plain` to see driver s
 | `--api-worker-id` NAME | Rig name reported by the API. | Machine hostname |
 | `--no-watchdog` | Turn off the built-in watchdog: a failed GPU stays in ERROR while the others mine, and the miner stays idle if every GPU fails. | Watchdog on |
 | `--watchdog-log` PATH | Set where the watchdog records failed GPUs and miner crashes. | `watchdog_log.txt` beside the executable |
+| `--watchdog-force-restart` [SCRIPT] | When a GPU fails or hangs, restart the miner with every GPU instead of leaving that GPU out. With a script path (`--watchdog-force-restart restart.sh` or `--watchdog-force-restart=restart.sh`), the script runs before each start of the miner, the first one included. | Off: failed GPUs are left out |
 | `--no-adl` | Disable AMD temperature, fan and power monitoring. | Off |
 | `--no-nvml` | Disable NVIDIA temperature, fan and power monitoring. | Off |
 | `--no-igcl` | Disable Intel temperature, fan and power monitoring. | Off |
@@ -361,6 +365,14 @@ A GPU shows **STUCK** when mining, job preparation or startup stops making progr
 The built-in watchdog is on by default, except in benchmark mode; you may see two `wildrig-ng` processes. After an NVIDIA driver failure that requires a restart, it restarts the miner and excludes the failed GPU for the rest of that run. The GPU appears as **ERROR**, and the reason is recorded in the watchdog log. Close and reopen the miner to retry an excluded GPU.
 
 If a GPU hangs in the driver, it stays **STUCK** while healthy GPUs continue mining; that alone does not restart the miner. An AMD or Intel GPU failure can likewise leave the other GPUs mining. If no GPU is detected at startup, the watchdog retries detection. If every GPU fails, the miner stays idle. With `--no-watchdog`, failed GPUs stay in **ERROR** until the miner is restarted.
+
+With `--watchdog-force-restart`, no GPU is left out: any GPU that fails or hangs restarts the miner, and every GPU starts mining again. A GPU that keeps failing therefore restarts the miner again and again, with pauses of up to 60 seconds between restarts; check the watchdog log if that happens. The supervisor waits for the optional script to finish before starting the miner. It logs the script path and its standard output and standard error; `--log-file` also saves this output. A script that does not finish delays the miner until it exits or the supervisor is stopped. The script receives these environment variables:
+
+* `WILDRIG_RESTART`: the number of restarts so far, `0` at the first start;
+* `WILDRIG_RESTART_GPU`: the PCI address of the GPU that caused the last restart (for example `0000:03:00.0`); empty at the first start and after a miner crash;
+* `WILDRIG_RESTART_REASON`: the cause recorded for that GPU.
+
+On Windows, `.ps1` scripts run in PowerShell and everything else (`.bat`, `.cmd`, `.exe`) through `cmd`. On Linux, the script runs directly, or with `/bin/sh` when it is not executable. `--watchdog-force-restart` has no effect with `--no-watchdog`.
 
 Disabling hardware monitoring may also remove temperature, fan and power readings or controls.
 
@@ -384,8 +396,10 @@ The dashboard shows GPU hashrates, available sensor readings, share counters, po
 - **Accepted:** the pool accepted your share. This is the main indication that mining is working.
 - **Rejected:** the pool refused a submitted share. Repeated rejects need investigation; check the reason in the log.
 - **Stale / ignored:** work became outdated before submission. Network latency and frequent job changes can contribute.
-- **Hashrate:** local mining speed. Pool estimates fluctuate because they are calculated from submitted shares over time.
+- **Name:** the card's maker (for example ASUS, Gigabyte or Sapphire) followed by the GPU model. Reference cards and cards from an unrecognised maker show NVIDIA, AMD or Intel instead. In a narrow window the maker is hidden right after the PCI column.
+- **Hashrate:** local mining speed. Pool estimates fluctuate because they are calculated from submitted shares over time. A GPU that is not mining shows its state here instead: **INIT** while it starts, **IDLE** without work, **HOT**, **STUCK** or **ERROR**.
 - **DAG generation / tuning:** preparation before normal mining speed is reached. Allow it to complete before comparing performance.
+- **HOT:** the GPU reached `--gpu-temp-limit` and is paused until it cools down.
 - **STUCK:** the GPU has stopped making mining progress; the miner attempts to reinitialize it. See [Monitoring and recovery](#monitoring-and-recovery).
 - **ERROR:** the GPU failed; check the log for the reason.
 
@@ -408,6 +422,10 @@ Use **Page Up / Page Down**, **Up / Down**, **Home / End** or the mouse wheel to
 | A parameter seems to have no effect | Read startup warnings and run `--help`. Invalid settings may be ignored or stop startup. |
 
 When reporting a problem, include the miner version, operating system, GPU model, driver version, algorithm and relevant log lines. Remove passwords and proxy credentials before sharing logs.
+
+## License
+
+WildRig and its accompanying scripts and configuration examples are provided "AS IS", without warranty of any kind, express or implied, including warranties of merchantability, fitness for a particular purpose and non-infringement. You use them entirely at your own risk. To the maximum extent permitted by applicable law, the authors and contributors are not liable for any claims, damages or losses arising from their use, including hardware damage, data loss, electricity costs or lost mining income.
 
 ---
 
