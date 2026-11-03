@@ -168,11 +168,19 @@ For mining examples below, replace the miner command inside the `start.bat` or `
 ./wildrig-ng --algo kawpow --url stratum+tcp://PRIMARY_POOL:PORT --user YOUR_WALLET --worker rig01 --pass x --url stratum+tcp://BACKUP_POOL:PORT --pool-try-main
 ```
 
-Pools are tried in the order listed. A backup inherits the primary pool's login, password and worker unless you specify its own immediately after its `--url`. For different accounts:
+Pools are tried in the order listed. A backup inherits the login, password and worker of the pool before it (the last ones specified) unless you specify its own immediately after its `--url`. For different accounts:
 
 ```sh
 ./wildrig-ng --algo kawpow --url PRIMARY_POOL:PORT --user FIRST_WALLET --pass x --url BACKUP_POOL:PORT --user SECOND_WALLET --pass x
 ```
+
+The same pools can also be given as comma-separated lists:
+
+```sh
+./wildrig-ng --algo kawpow --url PRIMARY_POOL:PORT,BACKUP_POOL:PORT --user FIRST_WALLET,SECOND_WALLET --pass x
+```
+
+List values go to the pools of the preceding `--url` in order; `--worker` accepts a list too. A single value applies to every pool of the list, and a pool past the end of a shorter list inherits the last specified value. `--pass` takes no list, because pool passwords often contain commas, such as `c=RVN,d=8`: one password applies to every pool of the list. For different passwords, repeat `--url`. An invalid address drops its whole `--url` list together with the `--user`, `--pass` and `--worker` given for it (after it, or before the first `--url`), with a warning at startup, so they never land on another pool; if no pool keeps a login, startup stops with an error.
 
 By default, the miner stays on a working backup. `--pool-try-main` checks the primary about once a minute and returns when it becomes available. All listed pools should serve the selected algorithm.
 
@@ -250,10 +258,10 @@ Options accept `--name value` or `--name=value`. Flags such as `--benchmark` tak
 | Option | What it does | Default |
 | --- | --- | --- |
 | `--algo`, `-a` NAME | Select an algorithm from the table above. | Required |
-| `--url`, `-o` URL | Pool address. Repeat to add backups. `host:port` means TCP; use `stratum+ssl://host:port` for an encrypted connection when supported by your miner version. | Required for pool mining |
-| `--user`, `-u` LOGIN | Wallet or account for the preceding pool. Backups inherit the primary login when omitted. | Required for pool mining |
-| `--pass`, `-p` PASSWORD | Password for the preceding pool. | `x` |
-| `--worker`, `-w` NAME | Worker name, sent as `user.worker`. | Unset |
+| `--url`, `-o` URL or LIST | Pool address. Repeat it or give a comma-separated list to add backups. `host:port` means TCP; use `stratum+ssl://host:port` for an encrypted connection when supported by your miner version. | Required for pool mining |
+| `--user`, `-u` LOGIN or LIST | Wallet or account for the preceding pool, or a comma-separated list with one per pool of the preceding `--url`. A pool without its own login inherits the previous pool's. | Required for pool mining |
+| `--pass`, `-p` PASSWORD | Password for the preceding pool; it applies to every pool of a `--url` list and to later pools without their own, never to pools before it. | `x` |
+| `--worker`, `-w` NAME or LIST | Worker name, sent as `user.worker`; a comma-separated list gives one per pool. | Unset |
 
 ### Connection and failover
 
@@ -263,7 +271,7 @@ Options accept `--name value` or `--name=value`. Flags such as `--benchmark` tak
 | `--pool-retry-pause` SECONDS | Pause between connection attempts; at least 1. | `5` |
 | `--pool-try-main` | Periodically try the primary while mining on a backup. | Off |
 | `--pool-max-rejects` N | Disconnect after N consecutive rejected shares and follow the pool retry or failover rules. Set `0` to disable. | `5` |
-| `--pool-send-stale` | Always submit stale shares, overriding automatic pool detection. Pool acceptance is not guaranteed. | Off |
+| `--pool-send-stale` | Always submit stale shares of the current pool session, overriding automatic pool detection. Pool acceptance is not guaranteed. Shares from a previous session (after a reconnect or a pool switch) are still ignored. | Off |
 | `--pool-timeout` SECONDS | Connection and handshake timeout; greater than 0. | `10` |
 | `--proxy` ADDRESS | SOCKS5 proxy: `host:port`, `socks5://user:password@host:port` or `socks5h://user:password@host:port`. | Unset |
 | `--tls-verify` | Verify pool TLS certificates. | Off |
@@ -362,9 +370,11 @@ On Windows, AMD sensor readings depend on the GPU and driver; unsupported readin
 
 A GPU shows **STUCK** when mining, job preparation or startup stops making progress. The miner attempts recovery where possible. Check the log, driver, clocks and available memory if the GPU stays STUCK.
 
+A GPU that cannot prepare a job, for example when the DAG does not fit into free GPU memory, shows **ERROR** with the reason and tries again with the next job. After two failures in a row the miner reinitializes the GPU once; it does so again only after the GPU has worked for 5 minutes without errors. A refused job alone does not take the GPU out of mining; only a GPU that fails to reinitialize is left out. Close other programs that use GPU memory if the error persists.
+
 The built-in watchdog is on by default, except in benchmark mode; you may see two `wildrig-ng` processes. After an NVIDIA driver failure that requires a restart, it restarts the miner and excludes the failed GPU for the rest of that run. The GPU appears as **ERROR**, and the reason is recorded in the watchdog log. Close and reopen the miner to retry an excluded GPU.
 
-If a GPU hangs in the driver, it stays **STUCK** while healthy GPUs continue mining; that alone does not restart the miner. An AMD or Intel GPU failure can likewise leave the other GPUs mining. If no GPU is detected at startup, the watchdog retries detection. If every GPU fails, the miner stays idle. With `--no-watchdog`, failed GPUs stay in **ERROR** until the miner is restarted.
+If a GPU hangs in the driver, it stays **STUCK** while healthy GPUs continue mining; that alone does not restart the miner. If the driver call returns later and the GPU recovers, it mines again and is no longer left out when the miner restarts. An AMD or Intel GPU failure can likewise leave the other GPUs mining. If no GPU is detected at startup, the watchdog retries detection. If every GPU fails, the miner stays idle. With `--no-watchdog`, failed GPUs stay in **ERROR** until the miner is restarted.
 
 With `--watchdog-force-restart`, no GPU is left out: any GPU that fails or hangs restarts the miner, and every GPU starts mining again. A GPU that keeps failing therefore restarts the miner again and again, with pauses of up to 60 seconds between restarts; check the watchdog log if that happens. The supervisor waits for the optional script to finish before starting the miner. It logs the script path and its standard output and standard error; `--log-file` also saves this output. A script that does not finish delays the miner until it exits or the supervisor is stopped. The script receives these environment variables:
 
@@ -395,9 +405,10 @@ The dashboard shows GPU hashrates, available sensor readings, share counters, po
 
 - **Accepted:** the pool accepted your share. This is the main indication that mining is working.
 - **Rejected:** the pool refused a submitted share. Repeated rejects need investigation; check the reason in the log.
-- **Stale / ignored:** work became outdated before submission. Network latency and frequent job changes can contribute.
-- **Name:** the card's maker (for example ASUS, Gigabyte or Sapphire) followed by the GPU model. Reference cards and cards from an unrecognised maker show NVIDIA, AMD or Intel instead. In a narrow window the maker is hidden right after the PCI column.
+- **Stale / ignored:** work became outdated before submission, or the connection closed before the pool answered a submitted share. Network latency and frequent job changes can contribute.
+- **Device:** the card's maker (for example ASUS, Gigabyte or Sapphire) followed by the GPU model. Reference cards and cards from an unrecognised maker show NVIDIA, AMD or Intel instead. In a narrow window the maker is hidden right after the PCI column.
 - **Hashrate:** local mining speed. Pool estimates fluctuate because they are calculated from submitted shares over time. A GPU that is not mining shows its state here instead: **INIT** while it starts, **IDLE** without work, **HOT**, **STUCK** or **ERROR**.
+- **CClk / MClk:** current core and memory clocks in MHz. When the driver reports an overclock offset, it follows in grey under **COff / MOff**; a dash means that card has no offset.
 - **DAG generation / tuning:** preparation before normal mining speed is reached. Allow it to complete before comparing performance.
 - **HOT:** the GPU reached `--gpu-temp-limit` and is paused until it cools down.
 - **STUCK:** the GPU has stopped making mining progress; the miner attempts to reinitialize it. See [Monitoring and recovery](#monitoring-and-recovery).
