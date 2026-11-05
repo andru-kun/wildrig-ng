@@ -320,6 +320,7 @@ For options accepting a list, one value applies to all selected GPUs. Multiple v
 | `--gpu-core-offset` N or LIST | Core clock offset in MHz. | `-2000..2000`; unset |
 | `--gpu-memory-clock` N or LIST | Lock memory clock in MHz. | `0..20000`; unset |
 | `--gpu-memory-offset` N or LIST | Memory clock offset in MHz. | `-5000..5000`; unset |
+| `--gpu-vddc-offset` N or LIST | Core voltage offset in mV (undervolt only; `0` shows the `VDDC` column without changing voltage). Requires a locked core clock on supported NVIDIA GPUs; restored on normal shutdown. | `-100..0`; unset |
 | `--gpu-powerlimit` N or LIST | Power limit in watts. | `1..2000`; unset |
 | `--gpu-fan-speed` N or LIST | `0` restores driver control; `1..100` sets fixed fan speed in percent, retained after exit. | `0..100`; unset |
 | `--gpu-fan-target` C or LIST | Adjust fan speed to target the GPU core temperature. Overrides fixed fan speed on the corresponding GPU; pauses that GPU if core temperature is unavailable. Restores each fan's previous policy and fixed speed on normal shutdown. Use with caution. | `1..150` °C; unset |
