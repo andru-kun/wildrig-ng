@@ -139,6 +139,7 @@ Use the name in the first column with `--algo`. **Yes** means supported on compa
 | --- | --- | --- | --- | --- | --- |
 | `autolykos2` | Ergo | 0% | Yes | Yes | Yes |
 | `kawpow` | Ravencoin | 1% | Yes | Yes | Yes |
+| `nebhash` | NEB | 2% | Ampere or newer | RDNA 1–4 | — |
 | `nexapow` | Nexa | 1% | Yes | Yes | Yes |
 | `noid` | Parano1d | 2% | Volta or newer | RDNA 1–4 | — |
 | `octopus` | Conflux | 0% | Yes | — | — |
